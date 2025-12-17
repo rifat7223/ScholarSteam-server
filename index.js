@@ -1,8 +1,4 @@
-
-
 require('dotenv').config()
-
-
 const express = require('express')
 const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
@@ -56,9 +52,11 @@ const client = new MongoClient(process.env.MONGODB_URI, {
 })
 async function run() {
   try {
+    // db collection
     const db= client.db('AllScholar')
     const scholarCollection=db.collection('Scholar')
     const ordercollection=db.collection('order')
+    const userCollection=db.collection('user')
     app.post('/scholar',async(req,res)=>{
       const scholarData=req.body
       const result=await scholarCollection.insertOne(scholarData)
@@ -200,6 +198,12 @@ app.get('/my-scholar/:email',async(req,res)=>{
   const result=await scholarCollection.find({
  'moderator.email':email}).toArray()
    res.send(result)
+})
+// user data save or update
+app.post('/user', async(req,res)=>{
+  const userdata=req.body
+const result=await userCollection.insertOne(userdata)
+  res.send(result)
 })
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 })
