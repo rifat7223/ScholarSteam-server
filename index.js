@@ -181,10 +181,10 @@ const order=await ordercollection.findOne({ transactionId:session.payment_intent
   }
 })
 // get all orders
-app.get('/my-orders/:email',async(req,res)=>{
-  const email=req.params.email
+app.get('/my-orders/',verifyJWT, async(req,res)=>{
+
   const result=await ordercollection.find({
-  studentEmail:email}).toArray()
+  studentEmail:req.tokenEmail}).toArray()
    res.send(result)
 })
 app.get('/my-modreator/:email',async(req,res)=>{
@@ -230,9 +230,9 @@ console.log(userdata)
 })
 
 // get a users by role
-app.get('/users/role/:email',async(req,res)=>{
-  const email=req.params.email
-  const result=await userCollection.findOne({email})
+app.get('/users/role',verifyJWT,async(req,res)=>{
+ 
+  const result=await userCollection.findOne({email:req.tokenEmail})
   res.send({role:result?.role})
 })
     // Send a ping to confirm a successful connection
