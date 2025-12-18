@@ -57,6 +57,7 @@ async function run() {
     const scholarCollection=db.collection('Scholar')
     const ordercollection=db.collection('order')
     const userCollection=db.collection('user')
+    const moderatorCollection=db.collection('modreator')
     app.post('/scholar',async(req,res)=>{
       const scholarData=req.body
       const result=await scholarCollection.insertOne(scholarData)
@@ -240,6 +241,46 @@ app.get('/users/role',verifyJWT,async(req,res)=>{
     console.log(
       'Pinged your deployment. You successfully connected to MongoDB!'
     )
+    // become modreator repuest
+   app.post('/become-seller', verifyJWT, async (req, res) => {
+  const email = req.tokenEmail; 
+
+  // check if already requested
+  const alreadyExist = await moderatorCollection.findOne({ email });
+
+  if (alreadyExist) {
+    return res
+      .status(409)
+      .send({ message: 'Already requested' });
+  }
+
+  //  insert only if not exists
+  const result = await moderatorCollection.insertOne({ email });
+
+  res.send(result);
+});
+// get all modreator request for admin
+app.get('/modreator-request',verifyJWT,async(req,res)=>{
+   const result = await moderatorCollection.find().toArray();
+
+  res.send(result);
+})
+// get all users for admin
+app.get('/users',verifyJWT,async(req,res)=>{
+  const adminEmail=req.tokenEmail
+   const result = await userCollection.find({email:{$ne:adminEmail}}).toArray();
+
+  res.send(result);
+})
+
+// update user role
+app.patch('/update-role',verifyJWT,async(req,res)=>{
+  const {email,role}=req.body
+  const result=await userCollection.updateOne({email},{$set:{role}})
+  await moderatorCollection.deleteOne({email})
+  console.log(result)
+  res.send(result)
+})
   } finally {
     // Ensures that the client will close when you finish/error
   }
