@@ -150,7 +150,7 @@ app.post('/payment-success', async (req, res) => {
     const scholar=await scholarCollection.findOne({_id: new ObjectId(session.metadata.scholarId)})
 const order=await ordercollection.findOne({ transactionId:session.payment_intent})
     if (session.payment_status === 'paid'&& scholar&& !order) {
-      // ✅ Save payment info to MongoDB
+      //  Save payment info to MongoDB
       const paymentData = {
         status:'pending',
         sessionId: session.id,
@@ -202,8 +202,38 @@ app.get('/my-scholar/:email',async(req,res)=>{
 // user data save or update
 app.post('/user', async(req,res)=>{
   const userdata=req.body
+  userdata.create_at=new Date().toISOString()
+  userdata.last_login=new Date().toISOString()
+  userdata.role='student'
+  const query={
+   email:userdata.email,
+  }
+  const alreadyExist=await userCollection.findOne(
+   query
+  )
+  console.log('user already exist---->',!!alreadyExist)
+  if(alreadyExist){
+    console.log('updating user info--->')
+    const result=await userCollection.updateOne(query,{
+      $set:{
+        last_login:new Date().toISOString()
+      }
+    })
+    return res.send(result)
+  }
+
+ console.log('saving new user info--->')
+
 const result=await userCollection.insertOne(userdata)
+console.log(userdata)
   res.send(result)
+})
+
+// get a users by role
+app.get('/users/role/:email',async(req,res)=>{
+  const email=req.params.email
+  const result=await userCollection.findOne({email})
+  res.send({role:result?.role})
 })
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 })
