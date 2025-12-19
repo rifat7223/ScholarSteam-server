@@ -58,7 +58,27 @@ async function run() {
     const ordercollection=db.collection('order')
     const userCollection=db.collection('user')
     const moderatorCollection=db.collection('modreator')
-    app.post('/scholar',async(req,res)=>{
+    // role midlewares
+    const verifyADMIN= async (req,res,next)=>{
+      const email =req.tokenEmail
+      const user=await userCollection.findOne({email})
+      if(user?.role!=='admin')
+        return res
+      .status(403)
+      .send({message:'Admin only action',role:user?.role})
+      next()
+    }
+    const verifySELLER= async (req,res,next)=>{
+      const email =req.tokenEmail
+      const user=await userCollection.findOne({email})
+      if(user?.role!=='modreator')
+        return res
+      .status(403)
+      .send({message:'Admin only action',role:user?.role})
+      next()
+    }
+    // save a plant data on db
+    app.post('/scholar', verifyJWT,verifySELLER, async(req,res)=>{
       const scholarData=req.body
       const result=await scholarCollection.insertOne(scholarData)
       res.send(result)
@@ -260,13 +280,13 @@ app.get('/users/role',verifyJWT,async(req,res)=>{
   res.send(result);
 });
 // get all modreator request for admin
-app.get('/modreator-request',verifyJWT,async(req,res)=>{
+app.get('/modreator-request',verifyJWT,verifyADMIN, async(req,res)=>{
    const result = await moderatorCollection.find().toArray();
 
   res.send(result);
 })
 // get all users for admin
-app.get('/users',verifyJWT,async(req,res)=>{
+app.get('/users',verifyJWT,verifyADMIN, async(req,res)=>{
   const adminEmail=req.tokenEmail
    const result = await userCollection.find({email:{$ne:adminEmail}}).toArray();
 
@@ -274,7 +294,7 @@ app.get('/users',verifyJWT,async(req,res)=>{
 })
 
 // update user role
-app.patch('/update-role',verifyJWT,async(req,res)=>{
+app.patch('/update-role',verifyJWT, verifyADMIN, async(req,res)=>{
   const {email,role}=req.body
   const result=await userCollection.updateOne({email},{$set:{role}})
   await moderatorCollection.deleteOne({email})
