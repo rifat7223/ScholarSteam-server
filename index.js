@@ -59,26 +59,26 @@ async function run() {
     const userCollection=db.collection('user')
     const moderatorCollection=db.collection('modreator')
     // role midlewares
-    const verifyADMIN= async (req,res,next)=>{
-      const email =req.tokenEmail
-      const user=await userCollection.findOne({email})
-      if(user?.role!=='admin')
-        return res
-      .status(403)
-      .send({message:'Admin only action',role:user?.role})
-      next()
-    }
-    const verifySELLER= async (req,res,next)=>{
-      const email =req.tokenEmail
-      const user=await userCollection.findOne({email})
-      if(user?.role!=='modreator')
-        return res
-      .status(403)
-      .send({message:'Admin only action',role:user?.role})
-      next()
-    }
+    // const verifyADMIN= async (req,res,next)=>{
+    //   const email =req.tokenEmail
+    //   const user=await userCollection.findOne({email})
+    //   if(user?.role!=='admin')
+    //     return res
+    //   .status(403)
+    //   .send({message:'Admin only action',role:user?.role})
+    //   next()
+    // }
+    // const verifySELLER= async (req,res,next)=>{
+    //   const email =req.tokenEmail
+    //   const user=await userCollection.findOne({email})
+    //   if(user?.role!=='modreator')
+    //     return res
+    //   .status(403)
+    //   .send({message:'Admin only action',role:user?.role})
+    //   next()
+    // }
     // save a plant data on db
-    app.post('/scholar', verifyJWT,verifySELLER, async(req,res)=>{
+    app.post('/scholar', verifyJWT, async(req,res)=>{
       const scholarData=req.body
       const result=await scholarCollection.insertOne(scholarData)
       res.send(result)
@@ -201,6 +201,37 @@ const order=await ordercollection.findOne({ transactionId:session.payment_intent
     res.status(500).send({ error: error.message })
   }
 })
+// Update a scholar by ID
+app.patch('/scholar/:id', verifyJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ success: false, message: 'Invalid ID' });
+    }
+
+   
+    if (updatedData.tuitionFees) updatedData.tuitionFees = Number(updatedData.tuitionFees);
+    if (updatedData.applicationFees) updatedData.applicationFees = Number(updatedData.applicationFees);
+    if (updatedData.serviceCharge) updatedData.serviceCharge = Number(updatedData.serviceCharge);
+
+    const result = await scholarCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedData }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.send({ success: true, message: 'Scholarship updated successfully' });
+    } else {
+      res.status(404).send({ success: false, message: 'Scholarship not found or no changes made' });
+    }
+  } catch (err) {
+    console.error('Update error:', err);
+    res.status(500).send({ success: false, message: 'Server error' });
+  }
+});
+
 // get all orders
 app.get('/my-orders/',verifyJWT, async(req,res)=>{
 
@@ -214,12 +245,40 @@ app.get('/my-modreator/:email',async(req,res)=>{
  'moderator.email':email}).toArray()
    res.send(result)
 })
-app.get('/my-scholar/:email',async(req,res)=>{
-  const email=req.params.email
-  const result=await scholarCollection.find({
- 'moderator.email':email}).toArray()
-   res.send(result)
-})
+app.get('/my-scholar', verifyJWT, async (req, res) => {
+  try {
+    const email = req.tokenEmail; // ✅ from verified JWT
+    const result = await scholarCollection.find({
+      'moderator.email': email
+    }).toArray();
+    res.send(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: 'Server error' });
+  }
+});
+// Delete a scholar by ID
+app.delete('/scholar/:id', verifyJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ success: false, message: 'Invalid ID' });
+    }
+
+    const result = await scholarCollection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 1) {
+      res.send({ success: true, message: 'Scholar deleted successfully' });
+    } else {
+      res.status(404).send({ success: false, message: 'Scholar not found' });
+    }
+  } catch (err) {
+    console.error('Delete error:', err);
+    res.status(500).send({ success: false, message: 'Server error' });
+  }
+});
+
 // user data save or update
 app.post('/user', async(req,res)=>{
   const userdata=req.body
@@ -280,13 +339,13 @@ app.get('/users/role',verifyJWT,async(req,res)=>{
   res.send(result);
 });
 // get all modreator request for admin
-app.get('/modreator-request',verifyJWT,verifyADMIN, async(req,res)=>{
+app.get('/modreator-request',verifyJWT, async(req,res)=>{
    const result = await moderatorCollection.find().toArray();
 
   res.send(result);
 })
 // get all users for admin
-app.get('/users',verifyJWT,verifyADMIN, async(req,res)=>{
+app.get('/users',verifyJWT, async(req,res)=>{
   const adminEmail=req.tokenEmail
    const result = await userCollection.find({email:{$ne:adminEmail}}).toArray();
 
@@ -294,7 +353,7 @@ app.get('/users',verifyJWT,verifyADMIN, async(req,res)=>{
 })
 
 // update user role
-app.patch('/update-role',verifyJWT, verifyADMIN, async(req,res)=>{
+app.patch('/update-role',verifyJWT,  async(req,res)=>{
   const {email,role}=req.body
   const result=await userCollection.updateOne({email},{$set:{role}})
   await moderatorCollection.deleteOne({email})
