@@ -80,9 +80,56 @@ async function run() {
     // save a plant data on db
     app.post('/scholar', verifyJWT, async(req,res)=>{
       const scholarData=req.body
+        scholarData.createdAt = new Date();
       const result=await scholarCollection.insertOne(scholarData)
       res.send(result)
     })
+        // GET ALL SCHOLARS (SEARCH + FILTER + SORT)
+   
+    app.get('/scholar', async (req, res) => {
+      try {
+        const {
+          search = '',
+          country = '',
+          category = '',
+          sort = '',
+          order = 'asc'
+        } = req.query;
+
+        const query = {};
+
+        // 🔍 SEARCH
+        if (search) {
+          query.$or = [
+            { scholarshipName: { $regex: search, $options: 'i' } },
+            { universityName: { $regex: search, $options: 'i' } },
+            { degree: { $regex: search, $options: 'i' } },
+          ];
+        }
+
+        // 🎯 FILTER
+        if (country) query.universityCountry = country;
+        if (category) query.scholarshipCategory = category;
+
+        // 🔃 SORT
+        const sortQuery = {};
+        if (sort === 'fees') {
+          sortQuery.applicationFees = order === 'desc' ? -1 : 1;
+        }
+        if (sort === 'date') {
+          sortQuery.createdAt = order === 'desc' ? -1 : 1;
+        }
+
+        const result = await scholarCollection
+          .find(query)
+          .sort(sortQuery)
+          .toArray();
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Server error' });
+      }
+    });
     // all scholar get
     app.get('/scholar',async(req,res)=>{
      
@@ -233,18 +280,77 @@ app.patch('/scholar/:id', verifyJWT, async (req, res) => {
 });
 
 // get all orders
-app.get('/my-orders/',verifyJWT, async(req,res)=>{
+// app.get('/my-orders/',verifyJWT, async(req,res)=>{
 
-  const result=await ordercollection.find({
-  studentEmail:req.tokenEmail}).toArray()
-   res.send(result)
+//   const result=await ordercollection.find({
+//   studentEmail:req.tokenEmail}).toArray()
+//    res.send(result)
+// })
+  app.get('/my-orders', verifyJWT, async (req, res) => {
+      const orders = await ordercollection
+        .find({ studentEmail: req.tokenEmail })
+        .sort({ timestamp: -1 })
+        .toArray();
+      res.send(orders);
+    });
+// Delete order from ordercollection
+// Cancel order (moderator)
+app.delete('/orders/:id', verifyJWT, async (req, res) => {
+  const { id } = req.params
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: 'Invalid order id' })
+  }
+
+  // Ensure only the assigned moderator can cancel
+  const order = await ordercollection.findOne({
+    _id: new ObjectId(id),
+    'moderator.email': req.tokenEmail,
+  })
+
+  if (!order) {
+    return res.status(403).send({ message: 'Forbidden action' })
+  }
+
+  const result = await ordercollection.deleteOne({
+    _id: new ObjectId(id),
+  })
+
+  res.send({
+    success: true,
+    message: 'Order cancelled successfully',
+    deletedCount: result.deletedCount,
+  })
 })
-app.get('/my-modreator/:email',async(req,res)=>{
-  const email=req.params.email
-  const result=await ordercollection.find({
- 'moderator.email':email}).toArray()
-   res.send(result)
-})
+
+
+
+// app.get('/my-modreator/:email',async(req,res)=>{
+//   const email=req.params.email
+//   const result=await ordercollection.find({
+//  'moderator.email':email}).toArray()
+//    res.send(result)
+// })
+app.get('/my-moderator', verifyJWT, async (req, res) => {
+      const orders = await ordercollection
+        .find({ 'moderator.email': req.tokenEmail })
+        .toArray();
+      res.send(orders);
+    });
+
+     app.patch('/orders/status/:id', verifyJWT, async (req, res) => {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!ObjectId.isValid(id)) return res.status(400).send({ message: 'Invalid order ID' });
+
+      const result = await ordercollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status } }
+      );
+
+      res.send(result);
+    });
 app.get('/my-scholar', verifyJWT, async (req, res) => {
   try {
     const email = req.tokenEmail; // ✅ from verified JWT
