@@ -58,26 +58,7 @@ async function run() {
     const ordercollection=db.collection('order')
     const userCollection=db.collection('user')
     const moderatorCollection=db.collection('modreator')
-    // role midlewares
-    // const verifyADMIN= async (req,res,next)=>{
-    //   const email =req.tokenEmail
-    //   const user=await userCollection.findOne({email})
-    //   if(user?.role!=='admin')
-    //     return res
-    //   .status(403)
-    //   .send({message:'Admin only action',role:user?.role})
-    //   next()
-    // }
-    // const verifySELLER= async (req,res,next)=>{
-    //   const email =req.tokenEmail
-    //   const user=await userCollection.findOne({email})
-    //   if(user?.role!=='modreator')
-    //     return res
-    //   .status(403)
-    //   .send({message:'Admin only action',role:user?.role})
-    //   next()
-    // }
-    // save a plant data on db
+    
     app.post('/scholar', verifyJWT, async(req,res)=>{
       const scholarData=req.body
         scholarData.createdAt = new Date();
@@ -98,7 +79,7 @@ async function run() {
 
         const query = {};
 
-        // 🔍 SEARCH
+        //  SEARCH
         if (search) {
           query.$or = [
             { scholarshipName: { $regex: search, $options: 'i' } },
@@ -107,7 +88,7 @@ async function run() {
           ];
         }
 
-        // 🎯 FILTER
+        //  FILTER
         if (country) query.universityCountry = country;
         if (category) query.scholarshipCategory = category;
 
@@ -279,13 +260,7 @@ app.patch('/scholar/:id', verifyJWT, async (req, res) => {
   }
 });
 
-// get all orders
-// app.get('/my-orders/',verifyJWT, async(req,res)=>{
 
-//   const result=await ordercollection.find({
-//   studentEmail:req.tokenEmail}).toArray()
-//    res.send(result)
-// })
   app.get('/my-orders', verifyJWT, async (req, res) => {
       const orders = await ordercollection
         .find({ studentEmail: req.tokenEmail })
@@ -325,12 +300,7 @@ app.delete('/orders/:id', verifyJWT, async (req, res) => {
 
 
 
-// app.get('/my-modreator/:email',async(req,res)=>{
-//   const email=req.params.email
-//   const result=await ordercollection.find({
-//  'moderator.email':email}).toArray()
-//    res.send(result)
-// })
+/
 app.get('/my-moderator', verifyJWT, async (req, res) => {
       const orders = await ordercollection
         .find({ 'moderator.email': req.tokenEmail })
@@ -353,7 +323,7 @@ app.get('/my-moderator', verifyJWT, async (req, res) => {
     });
 app.get('/my-scholar', verifyJWT, async (req, res) => {
   try {
-    const email = req.tokenEmail; // ✅ from verified JWT
+    const email = req.tokenEmail; 
     const result = await scholarCollection.find({
       'moderator.email': email
     }).toArray();
@@ -467,7 +437,7 @@ app.patch('/update-role',verifyJWT,  async(req,res)=>{
   res.send(result)
 })
   } finally {
-    // Ensures that the client will close when you finish/error
+    
   }
 }
 run().catch(console.dir)
