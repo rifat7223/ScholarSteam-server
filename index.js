@@ -59,7 +59,7 @@ async function run() {
     const userCollection=db.collection('user')
     const moderatorCollection=db.collection('modreator')
     
-    app.post('/scholar', verifyJWT, async(req,res)=>{
+    app.post('/filter', verifyJWT, async(req,res)=>{
       const scholarData=req.body
         scholarData.createdAt = new Date();
       const result=await scholarCollection.insertOne(scholarData)
